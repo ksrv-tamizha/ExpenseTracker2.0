@@ -301,8 +301,10 @@
           editSelect.innerHTML = '<option value="">Select a category</option>';
           
           data.categories.forEach(cat => {
-            select.innerHTML += `<option value="${cat}">${cat}</option>`;
-            editSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            // Trim whitespace from Google Sheets just in case
+            const cleanCat = cat.trim(); 
+            select.innerHTML += `<option value="${cleanCat}">${cleanCat}</option>`;
+            editSelect.innerHTML += `<option value="${cleanCat}">${cleanCat}</option>`;
           });
         })
         .catch(error => {
@@ -400,32 +402,31 @@
       }
 
       dataArray.forEach(row => {
-        // Robust Date handling for both "YYYY-MM-DD" and text formats
         let parsedDate = row.date;
         let formattedForEdit = "";
         
-        if (row.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            // Already YYYY-MM-DD from new form inputs
-            formattedForEdit = row.date;
-            
-            // Reformat for beautiful display: "20 Jul 2026"
-            const d = new Date(row.date + 'T12:00:00'); // Force midday to avoid timezone shift
-            if (!isNaN(d)) {
-                parsedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-            }
-        } else {
-            // Legacy formats like "2 Jul"
-            const d = new Date(row.date + ' ' + new Date().getFullYear());
-            if (!isNaN(d)) {
-                // Adjust for timezone offset so ISO doesn't roll backwards
-                const offset = d.getTimezoneOffset() * 60000;
-                formattedForEdit = (new Date(d.getTime() - offset)).toISOString().split('T')[0];
-                parsedDate = row.date; // Keep original for display
-            }
+        // 1. Bulletproof Date Parsing
+        let d = new Date(row.date);
+        
+        // Try legacy format if standard parsing fails
+        if (isNaN(d.getTime())) {
+          d = new Date(row.date + ' ' + new Date().getFullYear());
         }
         
-        // Escape quotes in particular for inline functions
-        const safeParticular = row.particular.replace(/'/g, "\\'");
+        if (!isNaN(d.getTime())) {
+          // Force exact YYYY-MM-DD format for the edit modal's <input type="date">
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          formattedForEdit = `${year}-${month}-${day}`;
+          
+          // Format for beautiful display in the table
+          parsedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        
+        // 2. Escape quotes and trim spaces to prevent broken buttons/dropdowns
+        const safeParticular = (row.particular || "").replace(/'/g, "\\'");
+        const safeCategory = (row.category || "").toString().trim().replace(/'/g, "\\'");
 
         tbody.innerHTML += `
           <tr>
@@ -434,7 +435,7 @@
             <td class="px-2 fw-semibold" style="font-size: 0.9rem;">₹${parseFloat(row.amount).toLocaleString('en-IN')}</td>
             <td class="px-2 text-center">
               <button class="btn btn-sm btn-outline-primary" 
-                onclick="openEditModal(${row.rowId}, '${formattedForEdit}', '${row.category}', '${safeParticular}', ${row.amount})">
+                onclick="openEditModal(${row.rowId}, '${formattedForEdit}', '${safeCategory}', '${safeParticular}', ${row.amount})">
                 <i class="bi bi-pencil"></i>
               </button>
             </td>
