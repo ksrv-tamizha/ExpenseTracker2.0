@@ -34,7 +34,7 @@
       font-weight: 500; 
       font-size: 0.85rem;
       text-align: center;
-      flex: 1; /* Distributes width evenly */
+      flex: 1;
       white-space: nowrap;
       transition: all 0.3s ease; 
     }
@@ -236,11 +236,11 @@
             <div class="row">
               <div class="col-6 mb-3">
                 <label class="form-label text-muted fw-semibold small">Date</label>
-                <input type="date" id="editDate" class="form-control" required>
+                <input type="date" id="editDate" class="form-control">
               </div>
               <div class="col-6 mb-3">
                 <label class="form-label text-muted fw-semibold small">Category</label>
-                <select id="editCategory" class="form-select" required></select>
+                <select id="editCategory" class="form-select"></select>
               </div>
             </div>
             <div class="mb-3">
@@ -460,12 +460,18 @@
 
     function openEditModal(rowId, date, category, particular, amount) {
       document.getElementById('editRowId').value = rowId;
-      document.getElementById('editDate').value = date;
+      
+      // Store original values directly into the dataset for the fallback
+      const editDateInput = document.getElementById('editDate');
+      editDateInput.value = date;
+      editDateInput.dataset.original = date;
+      
       document.getElementById('editParticular').value = particular;
       document.getElementById('editAmount').value = amount;
       
       const catSelect = document.getElementById('editCategory');
       catSelect.value = ""; 
+      catSelect.dataset.original = category.toString().trim();
       
       const targetCat = category.toString().trim().toLowerCase();
       
@@ -490,13 +496,22 @@
       btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
       msg.innerText = '';
 
+      const editDateInput = document.getElementById("editDate");
+      const editCategorySelect = document.getElementById("editCategory");
+
+      // Fallback logic implemented here
+      const updatedDate = editDateInput.value || editDateInput.dataset.original;
+      const updatedCategory = editCategorySelect.value || editCategorySelect.dataset.original;
+      const updatedParticular = document.getElementById("editParticular").value;
+      const updatedAmount = document.getElementById("editAmount").value;
+
       const formData = new FormData();
       formData.append('action', 'edit');
       formData.append('rowId', document.getElementById('editRowId').value);
-      formData.append('date', document.getElementById('editDate').value);
-      formData.append('category', document.getElementById('editCategory').value);
-      formData.append('particular', document.getElementById('editParticular').value);
-      formData.append('amount', document.getElementById('editAmount').value);
+      formData.append('date', updatedDate);
+      formData.append('category', updatedCategory);
+      formData.append('particular', updatedParticular);
+      formData.append('amount', updatedAmount);
 
       fetch(scriptURL, { method: 'POST', body: formData })
         .then(response => response.json())
