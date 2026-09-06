@@ -550,23 +550,27 @@
         sel.appendChild(o);
       });
       
+      const targetCat = String(rawCat).trim().toLowerCase();
       let matched = false;
-      const trimmed = rawCat.trim();
-      const lower = trimmed.toLowerCase();
       
-      for (let i = 0; i < sel.options.length; i++) {
-        const ov = sel.options[i].value;
-        if (ov === rawCat || ov === trimmed || ov.toLowerCase() === lower) {
+      // Start loop at 1 to explicitly skip the blank "Select category" option
+      for (let i = 1; i < sel.options.length; i++) {
+        const optionVal = sel.options[i].value.trim().toLowerCase();
+        
+        // Fuzzy match: if they are identical, or if one is inside the other
+        if (optionVal === targetCat || (targetCat !== '' && (optionVal.includes(targetCat) || targetCat.includes(optionVal)))) {
           sel.selectedIndex = i;
           matched = true;
           break;
         }
       }
       
-      if (!matched) {
+      // If it still doesn't match, force it into the list so it isn't lost
+      if (!matched && targetCat !== '') {
         const o = document.createElement('option');
-        o.value = trimmed;
-        o.textContent = trimmed ? trimmed : '(unknown)';
+        const displayVal = String(rawCat).trim();
+        o.value = displayVal;
+        o.textContent = displayVal;
         o.selected = true;
         sel.appendChild(o);
       }
