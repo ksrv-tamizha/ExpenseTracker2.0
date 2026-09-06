@@ -301,7 +301,6 @@
           editSelect.innerHTML = '<option value="">Select a category</option>';
           
           data.categories.forEach(cat => {
-            // Trim whitespace from Google Sheets just in case
             const cleanCat = cat.trim(); 
             select.innerHTML += `<option value="${cleanCat}">${cleanCat}</option>`;
             editSelect.innerHTML += `<option value="${cleanCat}">${cleanCat}</option>`;
@@ -365,7 +364,6 @@
             return;
           }
 
-          // Sort the categories array by amount in descending order
           const sortedCategories = Object.entries(data.categorySplit).sort((a, b) => b[1] - a[1]);
 
           for (const [category, amount] of sortedCategories) {
@@ -405,26 +403,21 @@
         let parsedDate = row.date;
         let formattedForEdit = "";
         
-        // 1. Bulletproof Date Parsing
-        let d = new Date(row.date);
-        
-        // Try legacy format if standard parsing fails
-        if (isNaN(d.getTime())) {
-          d = new Date(row.date + ' ' + new Date().getFullYear());
+        let dateStr = String(row.date);
+        if (!/\d{4}/.test(dateStr)) {
+          dateStr += ' ' + new Date().getFullYear(); 
         }
         
+        let d = new Date(dateStr);
+        
         if (!isNaN(d.getTime())) {
-          // Force exact YYYY-MM-DD format for the edit modal's <input type="date">
           const year = d.getFullYear();
           const month = String(d.getMonth() + 1).padStart(2, '0');
           const day = String(d.getDate()).padStart(2, '0');
           formattedForEdit = `${year}-${month}-${day}`;
-          
-          // Format for beautiful display in the table
           parsedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
         }
         
-        // 2. Escape quotes and trim spaces to prevent broken buttons/dropdowns
         const safeParticular = (row.particular || "").replace(/'/g, "\\'");
         const safeCategory = (row.category || "").toString().trim().replace(/'/g, "\\'");
 
@@ -457,7 +450,6 @@
       const endDate = endVal ? new Date(endVal + 'T23:59:59') : new Date('2100-01-01');
 
       const filteredData = allTrackerData.filter(row => {
-        // Evaluate the date consistently regardless of format
         let rowDateStr = row.date.match(/^\d{4}-\d{2}-\d{2}$/) ? (row.date + 'T12:00:00') : (row.date + ' ' + new Date().getFullYear());
         const rowDate = new Date(rowDateStr);
         return rowDate >= startDate && rowDate <= endDate;
@@ -469,9 +461,21 @@
     function openEditModal(rowId, date, category, particular, amount) {
       document.getElementById('editRowId').value = rowId;
       document.getElementById('editDate').value = date;
-      document.getElementById('editCategory').value = category;
       document.getElementById('editParticular').value = particular;
       document.getElementById('editAmount').value = amount;
+      
+      const catSelect = document.getElementById('editCategory');
+      catSelect.value = ""; 
+      
+      const targetCat = category.toString().trim().toLowerCase();
+      
+      for (let i = 0; i < catSelect.options.length; i++) {
+        const optionText = catSelect.options[i].value.toLowerCase();
+        if (optionText === targetCat || (targetCat.includes("station") && optionText.includes("station"))) {
+          catSelect.selectedIndex = i;
+          break;
+        }
+      }
       
       var editModal = new bootstrap.Modal(document.getElementById('editModal'));
       editModal.show();
